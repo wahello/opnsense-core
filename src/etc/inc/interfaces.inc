@@ -2460,12 +2460,10 @@ function interface_configure($verbose = false, $interface = 'wan', $reload = fal
                 /* Enable RFC6204w support for IPv6 Customer Edge (CE) router */
                 set_single_sysctl('net.inet6.ip6.rfc6204w3', '1');
 
-                /* XXX why not tell the function... */
-                if (isset($wancfg['dhcp6usev4iface'])) {
-                    break;
+                if (!isset($wancfg['dhcp6usev4iface'])) {
+                    interface_dhcpv6_prepare($interface, $wancfg);
+                    interface_dhcpv6_configure($interface, $wancfg);
                 }
-                interface_dhcpv6_prepare($interface, $wancfg);
-                interface_dhcpv6_configure($interface, $wancfg);
                 break;
             case '6rd':
                 interface_6rd_configure($interface, $wancfg);
@@ -2477,11 +2475,9 @@ function interface_configure($verbose = false, $interface = 'wan', $reload = fal
                 interface_track6_configure($interface, $wancfg, $reload || $linkupevent);
                 break;
             default:
-                /* XXX why not tell the function... */
-                if (isset($wancfg['dhcp6usev4iface'])) {
-                    break;
+                if (!isset($wancfg['dhcp6usev4iface'])) {
+                    interface_static6_configure($interface, $wancfg);
                 }
-                interface_static6_configure($interface, $wancfg);
                 break;
         }
 
