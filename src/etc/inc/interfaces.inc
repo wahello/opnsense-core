@@ -2450,11 +2450,21 @@ function interface_configure($verbose = false, $interface = 'wan', $reload = fal
         switch ($wancfg['ipaddrv6']) {
             case 'slaac':
             case 'dhcp6':
-                interface_dhcpv6_prepare($interface, $wancfg);
+                $realifv6 = get_real_interface($interface, 'inet6');
+
+                /* accept router advertisements for this interface */
+                set_single_sysctl('net.inet6.ip6.accept_rtadv', '1');
+                log_error("Accept router advertisements on interface {$realifv6}");
+                mwexecf('/sbin/ifconfig %s inet6 accept_rtadv -ifdisabled', $realifv6);
+
+                /* Enable RFC6204w support for IPv6 Customer Edge (CE) router */
+                set_single_sysctl('net.inet6.ip6.rfc6204w3', '1');
+
                 /* XXX why not tell the function... */
                 if (isset($wancfg['dhcp6usev4iface'])) {
                     break;
                 }
+                interface_dhcpv6_prepare($interface, $wancfg);
                 interface_dhcpv6_configure($interface, $wancfg);
                 break;
             case '6rd':
@@ -2474,6 +2484,8 @@ function interface_configure($verbose = false, $interface = 'wan', $reload = fal
                 interface_static6_configure($interface, $wancfg);
                 break;
         }
+
+        /* XXX we do not disable accept_rtadv on $realifv6 != $realif where unused */
     }
 
     if (!empty($wancfg['mtu'])) {
@@ -2936,14 +2948,6 @@ function interface_dhcpv6_prepare($interface = 'wan', $wancfg, $linkdownevent = 
     $wanif = get_real_interface($interface, 'inet6');
     $id = interface_dhcpv6_id($interface);
     $syscfg = config_read_array('system');
-
-    /* accept router advertisements for this interface */
-    set_single_sysctl('net.inet6.ip6.accept_rtadv', '1');
-    log_error("Accept router advertisements on interface {$wanif}");
-    mwexecf('/sbin/ifconfig %s inet6 accept_rtadv -ifdisabled', $wanif);
-
-    /* Enable RFC6204w support for IPv6 Customer Edge (CE) router */
-    set_single_sysctl('net.inet6.ip6.rfc6204w3', '1');
 
     $dhcp6cconf = DHCP6_Config_File_Basic($interface, $wancfg, $wanif, $id);
 
